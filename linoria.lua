@@ -1442,8 +1442,8 @@ do
         });
 
         local Inner = Library:Create('Frame', {
-            BackgroundColor3 = ShePrettyCuteNgl.MainColor;
-            BorderColor3 = ShePrettyCuteNgl.OutlineColor;
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
