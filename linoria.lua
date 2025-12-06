@@ -168,50 +168,32 @@ function Library:CreateLabel(Properties, IsHud)
 end;
 
 function Library:MakeDraggable(Instance, Cutoff)
-    Instance.Active = true
-    
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
-    local function update()
-        if not dragging then return end
-        
-        local mousePos = InputService:GetMouseLocation()
-        Instance.Position = UDim2.new(
-            0,
-            startPos.X.Offset + (mousePos.X - dragStart.X),
-            0,
-            startPos.Y.Offset + (mousePos.Y - dragStart.Y)
-        )
-    end
-    
+    Instance.Active = true;
+
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            local mousePos = InputService:GetMouseLocation()
-            local objPos = Vector2.new(
-                mousePos.X - Instance.AbsolutePosition.X,
-                mousePos.Y - Instance.AbsolutePosition.Y
-            )
-            
-            if objPos.Y > (Cutoff or 40) then
-                return
-            end
-            
-            dragging = true
-            dragStart = mousePos
-            startPos = Instance.Position
-        end
+            local ObjPos = Vector2.new(
+                Mouse.X - Instance.AbsolutePosition.X,
+                Mouse.Y - Instance.AbsolutePosition.Y
+            );
+
+            if ObjPos.Y > (Cutoff or 40) then
+                return;
+            end;
+
+            while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1 or Enum.UserInputType.Touch) do
+                Instance.Position = UDim2.new(
+                    0,
+                    Mouse.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
+                    0,
+                    Mouse.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
+                );
+
+                RenderStepped:Wait();
+            end;
+        end;
     end)
-    
-    InputService.InputEnded:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    
-    RenderStepped:Connect(update)
-end
+end;
 
 function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
