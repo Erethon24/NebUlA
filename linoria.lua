@@ -172,6 +172,7 @@ function Library:MakeDraggable(Instance, Cutoff)
 
 	local dragging = false
 	local dragStart, startPos
+	local targetPos = Instance.Position
 
 	local UserInputService = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
@@ -199,21 +200,21 @@ function Library:MakeDraggable(Instance, Cutoff)
 			input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
 					dragging = false
+					SmoothMove(Instance.Position, targetPos, 0.15)
 				end
 			end)
 		end
 	end)
 
 	Instance.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			if dragging then
-				local delta = input.Position - dragStart
-				local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-				SmoothMove(Instance.Position, newPos, 0.1)
-			end
+		if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+			local delta = input.Position - dragStart
+			targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+			Instance.Position = targetPos
 		end
 	end)
 end
+
 
 
 function Library:AddToolTip(InfoStr, HoverInstance)
