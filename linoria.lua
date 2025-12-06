@@ -170,29 +170,26 @@ end;
 function Library:MakeDraggable(Instance, Cutoff)
     Instance.Active = true
     local Dragging = false
-    local DragStart = Vector2.new(0, 0)
-    local UIStart = Vector2.new(0, 0)
+    local DragOffset = Vector2.new(0, 0)
 
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
             local MousePos = Vector2.new(Mouse.X, Mouse.Y)
             local ObjPos = Vector2.new(Instance.AbsolutePosition.X, Instance.AbsolutePosition.Y)
             if (MousePos - ObjPos).Y > (Cutoff or 40) then return end
+            DragOffset = MousePos - ObjPos
             Dragging = true
-            DragStart = MousePos
-            UIStart = ObjPos
         end
     end)
 
     Instance.InputEnded:Connect(function(Input)
         if (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) and Dragging then
             local MousePos = Vector2.new(Mouse.X, Mouse.Y)
-            local Delta = MousePos - DragStart
             Instance.Position = UDim2.new(
                 0,
-                UIStart.X + Delta.X - (Instance.Size.X.Offset * Instance.AnchorPoint.X),
+                MousePos.X - DragOffset.X,
                 0,
-                UIStart.Y + Delta.Y - (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
+                MousePos.Y - DragOffset.Y
             )
             Dragging = false
         end
