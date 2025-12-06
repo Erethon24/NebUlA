@@ -167,16 +167,16 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
-function Library:MakeDraggable(Instance, Cutoff)
+nction Library:MakeDraggable(Instance, Cutoff)
     Instance.Active = true
     local dragging = false
-    local dragOffset = Vector2.new()
+    local offsetX, offsetY = 0, 0
 
     Instance.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-            dragOffset = mousePos - Instance.AbsolutePosition
-            if dragOffset.Y > (Cutoff or 40) then return end
+            offsetX = Mouse.X - Instance.AbsolutePosition.X
+            offsetY = Mouse.Y - Instance.AbsolutePosition.Y
+            if offsetY > (Cutoff or 40) then return end
             dragging = true
         end
     end)
@@ -189,13 +189,13 @@ function Library:MakeDraggable(Instance, Cutoff)
 
     Mouse.Move:Connect(function()
         if dragging then
-            local mousePos = Vector2.new(Mouse.X, Mouse.Y)
             Instance.Position = UDim2.new(
                 0,
-                mousePos.X - dragOffset.X + Instance.Size.X.Offset * Instance.AnchorPoint.X,
+                Mouse.X - offsetX + Instance.Size.X.Offset * Instance.AnchorPoint.X,
                 0,
-                mousePos.Y - dragOffset.Y + Instance.Size.Y.Offset * Instance.AnchorPoint.Y
+                Mouse.Y - offsetY + Instance.Size.Y.Offset * Instance.AnchorPoint.Y
             )
+            RenderStepped:Wait()
         end
     end)
 end
