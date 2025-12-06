@@ -168,32 +168,53 @@ function Library:CreateLabel(Properties, IsHud)
 end;
 
 function Library:MakeDraggable(Instance, Cutoff)
-    Instance.Active = true;
+	Instance.Active = true
 
-    Instance.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            local ObjPos = Vector2.new(
-                Mouse.X - Instance.AbsolutePosition.X,
-                Mouse.Y - Instance.AbsolutePosition.Y
-            );
+	local dragging = false
+	local dragStart, startPos
 
-            if ObjPos.Y > (Cutoff or 40) then
-                return;
-            end;
+	local UserInputService = game:GetService("UserInputService")
+	local RunService = game:GetService("RunService")
 
-            while InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1 or Enum.UserInputType.Touch) do
-                Instance.Position = UDim2.new(
-                    0,
-                    Mouse.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
-                    0,
-                    Mouse.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
-                );
+	local function SmoothMove(fromPos, toPos, duration)
+		local startTime = tick()
+		local connection
+		connection = RunService.Heartbeat:Connect(function()
+			local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
+			local smoothAlpha = 1 - math.pow(1 - alpha, 3)
+			local newX = fromPos.X.Offset + (toPos.X.Offset - fromPos.X.Offset) * smoothAlpha
+			local newY = fromPos.Y.Offset + (toPos.Y.Offset - fromPos.Y.Offset) * smoothAlpha
+			Instance.Position = UDim2.new(fromPos.X.Scale, newX, fromPos.Y.Scale, newY)
+			if alpha >= 1 then
+				connection:Disconnect()
+			end
+		end)
+	end
 
-                RenderStepped:Wait();
-            end;
-        end;
-    end)
-end;
+	Instance.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = Instance.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	Instance.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			if dragging then
+				local delta = input.Position - dragStart
+				local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+				SmoothMove(Instance.Position, newPos, 0.1)
+			end
+		end
+	end)
+end
+
 
 function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
@@ -1410,186 +1431,122 @@ do
         return Label;
     end;
 
-function Funcs:AddButton(...)
-        -- TODO: Eventually redo this
+    function Funcs:AddButton(Text, Func)
         local Button = {};
-        local function ProcessButtonParams(Class, Obj, ...)
-            local Props = select(1, ...)
-            if type(Props) == 'table' then
-                Obj.Text = Props.Text
-                Obj.Func = Props.Func
-                Obj.DoubleClick = Props.DoubleClick
-                Obj.Tooltip = Props.Tooltip
-            else
-                Obj.Text = select(1, ...)
-                Obj.Func = select(2, ...)
-            end
-
-            assert(type(Obj.Func) == 'function', 'AddButton: `Func` callback is missing.');
-        end
-
-        ProcessButtonParams('Button', Button, ...)
 
         local Groupbox = self;
         local Container = Groupbox.Container;
 
-        local function CreateBaseButton(Button)
-            local Outer = Library:Create('Frame', {
-                BackgroundColor3 = Color3.new(0, 0, 0);
-                BorderColor3 = Color3.new(0, 0, 0);
-                Size = UDim2.new(1, -4, 0, 20);
-                ZIndex = 5;
-            });
+        local ButtonOuter = Library:Create('Frame', {
+            BorderColor3 = Color3.new(0, 0, 0);
+            Size = UDim2.new(1, -4, 0, 20);
+            ZIndex = 5;
+            Parent = Container;
+        });
 
-            local Inner = Library:Create('Frame', {
-                BackgroundColor3 = Library.MainColor;
-                BorderColor3 = Library.OutlineColor;
-                BorderMode = Enum.BorderMode.Inset;
-                Size = UDim2.new(1, 0, 1, 0);
-                ZIndex = 6;
-                Parent = Outer;
-            });
+        Library:AddToRegistry(ButtonOuter, {
+            BorderColor3 = 'Black';
+        });
 
-            local Label = Library:CreateLabel({
-                Size = UDim2.new(1, 0, 1, 0);
-                TextSize = 14;
-                Text = Button.Text;
-                ZIndex = 6;
-                Parent = Inner;
+        local ButtonInner = Library:Create('Frame', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 6;
+            Parent = ButtonOuter;
+        });
+
+        Library:AddToRegistry(ButtonInner, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+        });
+
+        Library:Create('UIGradient', {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
             });
+            Rotation = 90;
+            Parent = ButtonInner;
+        });
+
+        local ButtonLabel = Library:CreateLabel({
+            Size = UDim2.new(1, 0, 1, 0);
+            TextSize = 14;
+            Text = Text;
+            ZIndex = 6;
+            Parent = ButtonInner;
+        });
+
+        Library:OnHighlight(ButtonOuter, ButtonOuter,
+            { BorderColor3 = 'AccentColor' },
+            { BorderColor3 = 'Black' }
+        );
+
+        ButtonOuter.InputBegan:Connect(function(Input)
+            if (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) and not Library:MouseIsOverOpenedFrame() then
+                Func();
+            end;
+        end);
+
+        function Button:AddTooltip(tip)
+            if type(tip) == 'string' then
+                Library:AddToolTip(tip, ButtonOuter)
+            end
+            return Button
+        end
+
+        function Button:AddButton(Text, Func)
+            local SubButton = {}
+
+            ButtonOuter.Size = UDim2.new(0.5, -2, 0, 20)
+            
+            local Outer = ButtonOuter:Clone()
+            local Inner = Outer.Frame;
+            local Label = Inner:FindFirstChildWhichIsA('TextLabel')
+
+            Outer.Position = UDim2.new(1, 2, 0, 0)
+            Outer.Size = UDim2.fromOffset(ButtonOuter.AbsoluteSize.X - 2, ButtonOuter.AbsoluteSize.Y)
+            Outer.Parent = ButtonOuter
+
+            Label.Text = Text;
+
+            Library:AddToRegistry(Inner, {
+                BackgroundColor3 = 'MainColor';
+                BorderColor3 = 'OutlineColor';
+            });
+    
+            Library:OnHighlight(Outer, Outer,
+                { BorderColor3 = 'AccentColor' },
+                { BorderColor3 = 'Black' }
+            )
 
             Library:Create('UIGradient', {
                 Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
                     ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
                 });
+
                 Rotation = 90;
                 Parent = Inner;
             });
 
-            Library:AddToRegistry(Outer, {
-                BorderColor3 = 'Black';
-            });
+            Outer.InputBegan:Connect(function(Input)
+                if (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) and not Library:MouseIsOverOpenedFrame() then
+                    Func();
+                end;
+            end);
 
-            Library:AddToRegistry(Inner, {
-                BackgroundColor3 = 'MainColor';
-                BorderColor3 = 'OutlineColor';
-            });
-
-            Library:OnHighlight(Outer, Outer,
-                { BorderColor3 = 'AccentColor' },
-                { BorderColor3 = 'Black' }
-            );
-
-            return Outer, Inner, Label
-        end
-
-        local function InitEvents(Button)
-            local function WaitForEvent(event, timeout, validator)
-                local bindable = Instance.new('BindableEvent')
-                local connection = event:Once(function(...)
-
-                    if type(validator) == 'function' and validator(...) then
-                        bindable:Fire(true)
-                    else
-                        bindable:Fire(false)
-                    end
-                end)
-                task.delay(timeout, function()
-                    connection:disconnect()
-                    bindable:Fire(false)
-                end)
-                return bindable.Event:Wait()
-            end
-
-            local function ValidateClick(Input)
-                if Library:MouseIsOverOpenedFrame() then
-                    return false
-                end
-
-                if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then
-                    return false
-                end
-
-                return true
-            end
-
-            Button.Outer.InputBegan:Connect(function(Input)
-                if not ValidateClick(Input) then return end
-                if Button.Locked then return end
-
-                if Button.DoubleClick then
-                    Library:RemoveFromRegistry(Button.Label)
-                    Library:AddToRegistry(Button.Label, { TextColor3 = 'AccentColor' })
-
-                    Button.Label.TextColor3 = Library.AccentColor
-                    Button.Label.Text = 'Are you sure?'
-                    Button.Locked = true
-
-                    local clicked = WaitForEvent(Button.Outer.InputBegan, 0.5, ValidateClick)
-
-                    Library:RemoveFromRegistry(Button.Label)
-                    Library:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
-
-                    Button.Label.TextColor3 = Library.FontColor
-                    Button.Label.Text = Button.Text
-                    task.defer(rawset, Button, 'Locked', false)
-
-                    if clicked then
-                        Library:SafeCallback(Button.Func)
-                    end
-
-                    return
-                end
-
-                Library:SafeCallback(Button.Func);
-            end)
-        end
-
-        Button.Outer, Button.Inner, Button.Label = CreateBaseButton(Button)
-        Button.Outer.Parent = Container
-
-        InitEvents(Button)
-
-        function Button:AddTooltip(tooltip)
-            if type(tooltip) == 'string' then
-                Library:AddToolTip(tooltip, self.Outer)
-            end
-            return self
-        end
-
-
-        function Button:AddButton(...)
-            local SubButton = {}
-
-            ProcessButtonParams('SubButton', SubButton, ...)
-
-            self.Outer.Size = UDim2.new(0.5, -2, 0, 20)
-
-            SubButton.Outer, SubButton.Inner, SubButton.Label = CreateBaseButton(SubButton)
-
-            SubButton.Outer.Position = UDim2.new(1, 3, 0, 0)
-            SubButton.Outer.Size = UDim2.fromOffset(self.Outer.AbsoluteSize.X - 2, self.Outer.AbsoluteSize.Y)
-            SubButton.Outer.Parent = self.Outer
-
-            function SubButton:AddTooltip(tooltip)
-                if type(tooltip) == 'string' then
-                    Library:AddToolTip(tooltip, self.Outer)
+            function SubButton:AddTooltip(tip)
+                if type(tip) == 'string' then
+                    Library:AddToolTip(tip, Outer)
                 end
                 return SubButton
             end
 
-            if type(SubButton.Tooltip) == 'string' then
-                SubButton:AddTooltip(SubButton.Tooltip)
-            end
-
-            InitEvents(SubButton)
             return SubButton
-        end
-
-        if type(Button.Tooltip) == 'string' then
-            Button:AddTooltip(Button.Tooltip)
-        end
+        end 
 
         Groupbox:AddBlank(5);
         Groupbox:Resize();
