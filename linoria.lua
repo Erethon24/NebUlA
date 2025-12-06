@@ -169,33 +169,36 @@ end;
 
 function Library:MakeDraggable(Instance, Cutoff)
     Instance.Active = true
-    local Dragging = false
-    local DragOffset = Vector2.new(0, 0)
+    local dragging = false
+    local dragOffset = Vector2.new()
 
-    Instance.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            local MousePos = Vector2.new(Mouse.X, Mouse.Y)
-            local ObjPos = Vector2.new(Instance.AbsolutePosition.X, Instance.AbsolutePosition.Y)
-            if (MousePos - ObjPos).Y > (Cutoff or 40) then return end
-            DragOffset = MousePos - ObjPos
-            Dragging = true
+    Instance.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+            dragOffset = mousePos - Instance.AbsolutePosition
+            if dragOffset.Y > (Cutoff or 40) then return end
+            dragging = true
         end
     end)
 
-    Instance.InputEnded:Connect(function(Input)
-        if (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) and Dragging then
-            local MousePos = Vector2.new(Mouse.X, Mouse.Y)
+    Instance.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    Mouse.Move:Connect(function()
+        if dragging then
+            local mousePos = Vector2.new(Mouse.X, Mouse.Y)
             Instance.Position = UDim2.new(
                 0,
-                MousePos.X - DragOffset.X,
+                mousePos.X - dragOffset.X + Instance.Size.X.Offset * Instance.AnchorPoint.X,
                 0,
-                MousePos.Y - DragOffset.Y
+                mousePos.Y - dragOffset.Y + Instance.Size.Y.Offset * Instance.AnchorPoint.Y
             )
-            Dragging = false
         end
     end)
 end
-
 
 function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
