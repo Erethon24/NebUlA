@@ -168,53 +168,55 @@ function Library:CreateLabel(Properties, IsHud)
 end;
 
 function Library:MakeDraggable(Instance, Cutoff)
-	Instance.Active = true
+    Instance.Active = true
 
-	local dragging = false
-	local dragStart, startPos
-	local targetPos = Instance.Position
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+    local Mouse = game.Players.LocalPlayer:GetMouse()
 
-	local UserInputService = game:GetService("UserInputService")
-	local RunService = game:GetService("RunService")
+    local dragging = false
+    local dragStart, startPos
+    local targetPos = Instance.Position
 
-	local function SmoothMove(fromPos, toPos, duration)
-		local startTime = tick()
-		local connection
-		connection = RunService.Heartbeat:Connect(function()
-			local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
-			local smoothAlpha = 1 - math.pow(1 - alpha, 3)
-			local newX = fromPos.X.Offset + (toPos.X.Offset - fromPos.X.Offset) * smoothAlpha
-			local newY = fromPos.Y.Offset + (toPos.Y.Offset - fromPos.Y.Offset) * smoothAlpha
-			Instance.Position = UDim2.new(fromPos.X.Scale, newX, fromPos.Y.Scale, newY)
-			if alpha >= 1 then
-				connection:Disconnect()
-			end
-		end)
-	end
+    local function SmoothMove(fromPos, toPos, duration)
+        local startTime = tick()
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
+            local smoothAlpha = 1 - math.pow(1 - alpha, 3)
+            local newX = fromPos.X.Offset + (toPos.X.Offset - fromPos.X.Offset) * smoothAlpha
+            local newY = fromPos.Y.Offset + (toPos.Y.Offset - fromPos.Y.Offset) * smoothAlpha
+            Instance.Position = UDim2.new(fromPos.X.Scale, newX, fromPos.Y.Scale, newY)
+            if alpha >= 1 then
+                connection:Disconnect()
+            end
+        end)
+    end
 
-	Instance.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = Instance.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-					SmoothMove(Instance.Position, targetPos, 0.15)
-				end
-			end)
-		end
-	end)
+    Instance.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            local ObjPos = Vector2.new(Mouse.X - Instance.AbsolutePosition.X, Mouse.Y - Instance.AbsolutePosition.Y)
+            if ObjPos.Y > (Cutoff or 40) then return end
+            dragging = true
+            dragStart = Input.Position
+            startPos = Instance.Position
+            Input.Changed:Connect(function()
+                if Input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    SmoothMove(Instance.Position, targetPos, 0.15)
+                end
+            end)
+        end
+    end)
 
-	Instance.InputChanged:Connect(function(input)
-		if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
-			local delta = input.Position - dragStart
-			targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-			Instance.Position = targetPos
-		end
-	end)
+    Instance.InputChanged:Connect(function(Input)
+        if (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) and dragging then
+            local delta = Input.Position - dragStart
+            targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            Instance.Position = targetPos
+        end
+    end)
 end
-
 
 
 function Library:AddToolTip(InfoStr, HoverInstance)
